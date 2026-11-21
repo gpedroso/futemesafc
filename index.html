@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Futmesa Olímpico 3D - Lucas</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    body, html {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #060a14;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    #game-canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    /* UI Overlay */
+    #ui-container {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 16px;
+    }
+
+    /* Placar e Transmissão Estilo FIFA / EA SPORTS FC */
+    .top-bar-wrapper {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      width: 100%;
+    }
+
+    /* Selo de Transmissão Oficial estilo FIFA (igual da foto) */
+    .ea-broadcast-pill {
+      background: rgba(10, 15, 26, 0.92);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 8px;
+      padding: 6px 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.6);
+      backdrop-filter: blur(8px);
+    }
+    .ea-badge {
+      background: #000;
+      color: #fff;
+      font-weight: 900;
+      font-size: 11px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      border: 1px solid rgba(255,255,255,0.3);
+      letter-spacing: 0.5px;
+    }
+    .ea-live-text {
+      background: #22c55e;
+      color: #000;
+      font-weight: 900;
+      font-size: 11px;
+      padding: 2px 7px;
+      border-radius: 4px;
+      letter-spacing: 1px;
+    }
+    .ea-loc {
+      color: #cbd5e1;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    .ea-live-corner {
+      background: rgba(10, 15, 26, 0.88);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 6px;
+      padding: 6px 12px;
+      color: #fff;
+      font-weight: 900;
+      font-size: 12px;
+      letter-spacing: 1px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.6);
+    }
+    .ea-live-corner span {
+      color: #ef4444;
+      animation: pulseDot 1.2s infinite;
+    }
+    @keyframes pulseDot {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    /* Placar Estilo Olímpico / FIFA */
+    .scoreboard-wrapper {
+      display: flex;
+      justify-content: center;
+    }
+    .scoreboard {
+      background: linear-gradient(135deg, rgba(15, 23, 42, 0.94), rgba(30, 41, 59, 0.94));
+      border: 2px solid #38bdf8;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7), 0 0 20px rgba(56, 189, 248, 0.35);
+      border-radius: 16px;
+      padding: 8px 26px;
+      display: flex;
+      align-items: center;
+      gap: 26px;
+      color: #fff;
+      backdrop-filter: blur(10px);
+    }
+    .team {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-width: 120px;
+    }
+    .team-name {
+      font-size: 13px;
+      text-transform: uppercase;
+      font-weight: 800;
+      letter-spacing: 1.5px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .team-player .team-name { color: #38bdf8; }
+    .team-cpu .team-name { color: #f43f5e; }
+    .team-score {
+      font-size: 40px;
+      font-weight: 900;
+      line-height: 1;
+      margin-top: 3px;
+      text-shadow: 0 0 12px rgba(255,255,255,0.4);
+    }
+    .match-info {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 0 14px;
+      border-left: 1px solid rgba(255,255,255,0.12);
+      border-right: 1px solid rgba(255,255,255,0.12);
+    }
+    .match-title {
+      font-size: 11px;
+      font-weight: 800;
+      color: #fbbf24;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+    .match-touches {
+      margin-top: 4px;
+      font-size: 13px;
+      font-weight: 800;
+      background: rgba(0,0,0,0.5);
+      padding: 3px 12px;
+      border-radius: 20px;
+      color: #e2e8f0;
+      border: 1px solid rgba(56, 189, 248, 0.3);
+    }
+    .match-touches span {
+      color: #38bdf8;
+    }
+    .difficulty-badge {
+      margin-top: 4px;
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 1px;
+      padding: 2px 8px;
+      border-radius: 10px;
+      text-transform: uppercase;
+      background: rgba(34, 197, 94, 0.2);
+      color: #4ade80;
+      border: 1px solid rgba(34, 197, 94, 0.4);
+    }
+    .difficulty-badge.advanced {
+      background: rgba(244, 63, 94, 0.2);
+      color: #fb7185;
+      border-color: rgba(244, 63, 94, 0.4);
+    }
+
+    /* Mensagem Central (Apenas quando sai ponto) */
+    #banner-message {
+      position: absolute;
+      top: 32%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(0.85);
+      opacity: 0;
+      background: rgba(15, 23, 42, 0.96);
+      border: 3px solid #fbbf24;
+      padding: 16px 44px;
+      border-radius: 18px;
+      color: #fff;
+      font-size: 30px;
+      font-weight: 900;
+      letter-spacing: 1.5px;
+      text-align: center;
+      box-shadow: 0 0 40px rgba(251, 191, 36, 0.6);
+      transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      pointer-events: none;
+      z-index: 50;
+    }
+    #banner-message.show {
+      transform: translate(-50%, -50%) scale(1);
+      opacity: 1;
+    }
+    #banner-message .sub-banner {
+      font-size: 15px;
+      color: #94a3b8;
+      margin-top: 5px;
+      font-weight: 600;
+    }
+
+    /* Painel Inferior de Controles */
+    .bottom-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      width: 100%;
+    }
+    .controls-card {
+      background: rgba(15, 23, 42, 0.92);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: 14px;
+      padding: 12px 20px;
+      color: #cbd5e1;
+      font-size: 13px;
+      backdrop-filter: blur(8px);
+      box-shadow: 0 6px 20px rgba(0,0,0,0.5);
+    }
+    .controls-card h4 {
+      color: #38bdf8;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 8px;
+    }
+    .controls-grid {
+      display: grid;
+      grid-template-columns: auto auto;
+      gap: 6px 14px;
+      align-items: center;
+    }
+    .key-badge {
+      display: inline-block;
+      background: #334155;
+      color: #f8fafc;
+      font-weight: 800;
+      padding: 3px 8px;
+      border-radius: 6px;
+      border-bottom: 2px solid #1e293b;
+      font-size: 11px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    }
+    .key-badge.highlight-serve {
+      background: #eab308;
+      color: #0f172a;
+      border-bottom-color: #ca8a04;
+    }
+
+    /* Mira Central Discreta */
+    #crosshair {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 14px;
+      height: 14px;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      opacity: 0.7;
+    }
+    #crosshair::before, #crosshair::after {
+      content: '';
+      position: absolute;
+      background: #38bdf8;
+      box-shadow: 0 0 6px #38bdf8;
+    }
+    #crosshair::before {
+      top: 6px;
+      left: 0;
+      width: 14px;
+      height: 2px;
+    }
+    #crosshair::after {
+      top: 0;
+      left: 6px;
+      width: 2px;
+      height: 14px;
+    }
+
+    /* Overlays de Início e Dificuldade */
+    .overlay-screen {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(10, 15, 30, 0.94);
+      backdrop-filter: blur(12px);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      color: white;
+      z-index: 100;
+      pointer-events: auto;
+    }
+    .overlay-screen h1 {
+      font-size: 48px;
+      font-weight: 900;
+      letter-spacing: 2px;
+      background: linear-gradient(135deg, #38bdf8, #818cf8, #fbbf24);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 8px;
+      text-align: center;
+    }
+    .overlay-screen p {
+      font-size: 17px;
+      color: #94a3b8;
+      margin-bottom: 26px;
+      text-align: center;
+    }
+    .start-btn {
+      background: linear-gradient(135deg, #2563eb, #38bdf8);
+      color: white;
+      font-size: 18px;
+      font-weight: 800;
+      padding: 15px 44px;
+      border-radius: 30px;
+      border: none;
+      cursor: pointer;
+      box-shadow: 0 8px 24px rgba(37, 99, 235, 0.5);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .start-btn:hover {
+      transform: scale(1.06);
+      box-shadow: 0 12px 30px rgba(56, 189, 248, 0.7);
+    }
+    .instructions-list {
+      margin-top: 26px;
+      display: flex;
+      gap: 16px;
+      font-size: 13px;
+      color: #cbd5e1;
+      max-width: 840px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .instructions-list div {
+      background: rgba(255,255,255,0.07);
+      padding: 10px 18px;
+      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,0.12);
+    }
+
+    /* Tela de Seleção de Dificuldade */
+    #difficulty-overlay {
+      display: none;
+    }
+    .difficulty-cards-container {
+      display: flex;
+      gap: 26px;
+      margin-top: 10px;
+      max-width: 780px;
+      width: 90%;
+      justify-content: center;
+    }
+    .diff-card {
+      flex: 1;
+      background: rgba(30, 41, 59, 0.8);
+      border: 2px solid rgba(255, 255, 255, 0.12);
+      border-radius: 18px;
+      padding: 24px 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      cursor: pointer;
+      transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275), border-color 0.25s, box-shadow 0.25s;
+    }
+    .diff-card:hover {
+      transform: translateY(-6px) scale(1.02);
+    }
+    .diff-card.amador {
+      border-color: rgba(34, 197, 94, 0.4);
+    }
+    .diff-card.amador:hover {
+      border-color: #22c55e;
+      box-shadow: 0 12px 32px rgba(34, 197, 94, 0.4);
+    }
+    .diff-card.avancado {
+      border-color: rgba(244, 63, 94, 0.4);
+    }
+    .diff-card.avancado:hover {
+      border-color: #f43f5e;
+      box-shadow: 0 12px 32px rgba(244, 63, 94, 0.4);
+    }
+    .diff-icon {
+      font-size: 42px;
+      margin-bottom: 12px;
+    }
+    .diff-title {
+      font-size: 22px;
+      font-weight: 900;
+      margin-bottom: 6px;
+    }
+    .diff-card.amador .diff-title { color: #4ade80; }
+    .diff-card.avancado .diff-title { color: #fb7185; }
+    .diff-desc {
+      font-size: 13px;
+      color: #94a3b8;
+      line-height: 1.5;
+      margin-bottom: 20px;
+      min-height: 58px;
+    }
+    .diff-btn {
+      width: 100%;
+      padding: 12px 0;
+      border-radius: 25px;
+      border: none;
+      font-weight: 800;
+      font-size: 14px;
+      cursor: pointer;
+      color: white;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .diff-card.amador .diff-btn {
+      background: linear-gradient(135deg, #16a34a, #22c55e);
+      box-shadow: 0 4px 14px rgba(34, 197, 94, 0.4);
+    }
+    .diff-card.avancado .diff-btn {
+      background: linear-gradient(135deg, #e11d48, #f43f5e);
+      box-shadow: 0 4px 14px rgba(244, 63, 94, 0.4);
+    }
+  </style>
+  <!-- Three.js UMD via CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+  <canvas id="game-canvas"></canvas>
+
+  <div id="crosshair"></div>
+
+  <div id="ui-container">
+    <!-- Barra Superior com Selo de Transmissão Estilo EA SPORTS FC das Fotos -->
+    <div class="top-bar-wrapper">
+      <div class="ea-broadcast-pill">
+        <span class="ea-badge">EA</span>
+        <span class="ea-live-text">AO VIVO</span>
+        <span class="ea-loc">RIO DE JANEIRO, BRASIL</span>
+      </div>
+
+      <!-- Placar Central -->
+      <div class="scoreboard-wrapper">
+        <div class="scoreboard">
+          <div class="team team-player">
+            <div class="team-name">🇧🇷 LUCAS</div>
+            <div class="team-score" id="score-player">0</div>
+          </div>
+
+          <div class="match-info">
+            <div class="match-title">FUTMESA PRO</div>
+            <div class="match-touches">Toques: <span id="touches-count">0 / 80</span></div>
+            <div class="difficulty-badge" id="current-diff-badge">MODO: AMADOR</div>
+          </div>
+
+          <div class="team team-cpu">
+            <div class="team-name">🤖 COMPUTADOR</div>
+            <div class="team-score" id="score-cpu">0</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ea-live-corner">
+        <span>●</span> LIVE
+      </div>
+    </div>
+
+    <!-- Banner Central de Ponto -->
+    <div id="banner-message">
+      <div id="banner-title">PONTO!</div>
+      <div class="sub-banner" id="banner-sub">Lucas pontuou</div>
+    </div>
+
+    <!-- Barra Inferior de Dicas -->
+    <div class="bottom-bar">
+      <div class="controls-card">
+        <h4>🎮 Controles</h4>
+        <div class="controls-grid">
+          <div><span class="key-badge highlight-serve">F</span></div>
+          <div>Executar Saque</div>
+          <div><span class="key-badge">Setas / WASD</span></div>
+          <div>Mover jogador</div>
+          <div><span class="key-badge">Mouse</span></div>
+          <div>Girar câmera e mirar</div>
+          <div><span class="key-badge">Scroll Mouse</span></div>
+          <div>Zoom da Câmera</div>
+          <div><span class="key-badge">Z</span></div>
+          <div>Ajeitar bola (até 80 toques!)</div>
+          <div><span class="key-badge">X</span></div>
+          <div>Chutar para a mesa</div>
+        </div>
+      </div>
+
+      <div class="controls-card" style="text-align: right;">
+        <h4>🏟️ Estádio FIFA Style</h4>
+        <div>Torcida densa idêntica às fotos do EA FC</div>
+        <div>Mesa 20% maior (4.32m x 2.28m)</div>
+        <div>Bola Mikasa FT-5 Goalmaster Oficial</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 1. Tela Inicial -->
+  <div class="overlay-screen" id="start-overlay">
+    <h1>FUTMESA 3D</h1>
+    <p>Projeto do Lucas • Campeonato FIFA / EA FC Style</p>
+    <button class="start-btn" id="start-btn">ENTRAR NA QUADRA</button>
+
+    <div class="instructions-list">
+      <div>🚀 <strong>Tecla [F]</strong>: Saque com efeito</div>
+      <div>⚽ <strong>Tecla [Z]</strong>: Ajeita macio no ar (até 80 toques)</div>
+      <div>🎯 <strong>Tecla [X]</strong>: Chuta com força para a mesa</div>
+      <div>🔍 <strong>Scroll do Mouse</strong>: Ajusta o Zoom da câmera</div>
+      <div>🏟️ <strong>Torcida FIFA</strong>: Figurino e arquibancadas autênticas</div>
+    </div>
+  </div>
+
+  <!-- 2. Tela de Seleção de Dificuldade -->
+  <div class="overlay-screen" id="difficulty-overlay">
+    <h1>ESCOLHA O NÍVEL</h1>
+    <p>Selecione a dificuldade da partida contra o Computador:</p>
+
+    <div class="difficulty-cards-container">
+      <div class="diff-card amador" id="btn-diff-amador">
+        <div class="diff-icon">🟢</div>
+        <div class="diff-title">AMADOR</div>
+        <div class="diff-desc">
+          Para quem está pegando o jeito! O computador é mais calmo, devolve bolas mais altas e pode errar chutes para fora ou na rede.
+        </div>
+        <button class="diff-btn">JOGAR NO AMADOR</button>
+      </div>
+
+      <div class="diff-card avancado" id="btn-diff-avancado">
+        <div class="diff-icon">🔴</div>
+        <div class="diff-title">AVANÇADO</div>
+        <div class="diff-desc">
+          Para quem quer um desafio profissional! O computador é veloz, coloca bolas venenosas nas pontas e quase nem erra as bolas.
+        </div>
+        <button class="diff-btn">JOGAR NO AVANÇADO</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="game.js"></script>
+</body>
+</html>
